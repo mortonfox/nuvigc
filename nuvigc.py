@@ -26,6 +26,67 @@ CacheTypes = {
 	'V':'Vir', 'W':'Web', 'X':'Maz', 'Y':'Way', 'Z':'Meg',
 }
 
+Attributes = {
+	1:'Dogs allowed',
+	10:'Difficult climbing',
+	11:'May require wading',
+	12:'May require swimming',
+	13:'Available at all times',
+	14:'Recommended at night',
+	15:'Available during winter',
+	17:'Poison plants',
+	18:'Dangerous Animals',
+	19:'Ticks',
+	2:'Access or parking fee',
+	20:'Abandoned mines',
+	21:'Cliff / falling rocks',
+	22:'Hunting',
+	23:'Dangerous area',
+	24:'Wheelchair accessible',
+	25:'Parking available',
+	26:'Public transportation',
+	27:'Drinking water nearby',
+	28:'Public restrooms nearby',
+	29:'Telephone nearby',
+	3:'Climbing gear',
+	30:'Picnic tables nearby',
+	31:'Camping available',
+	32:'Bicycles',
+	33:'Motorcycles',
+	34:'Quads',
+	35:'Off-road vehicles',
+	36:'Snowmobiles',
+	37:'Horses',
+	38:'Campfires',
+	39:'Thorns',
+	4:'Boat',
+	40:'Stealth required',
+	41:'Stroller accessible',
+	42:'Needs maintenance',
+	43:'Watch for livestock',
+	44:'Flashlight required',
+	45:'Lost And Found Tour',
+	46:'Truck Driver/RV',
+	47:'Field Puzzle',
+	48:'UV Light Required',
+	49:'Snowshoes',
+	5:'Scuba gear',
+	50:'Cross Country Skis',
+	51:'Special Tool Required',
+	52:'Night Cache',
+	53:'Park and Grab',
+	54:'Abandoned Structure',
+	55:'Short hike (less than 1km)',
+	56:'Medium hike (1km-10km)',
+	57:'Long Hike (+10km)',
+	58:'Fuel Nearby',
+	59:'Food Nearby',
+	6:'Recommended for kids',
+	7:'Takes less than an hour',
+	8:'Scenic view',
+	9:'Significant hike',
+}
+
 LogConv = {
 	'found it':'F',
 	'webcam photo taken':'F',
@@ -39,7 +100,13 @@ def escAmp(s):
     Convert stray ampersands to HTML entities but leave
     existing HTML entities alone.
     """
-    return re.sub(r'&(?!\w+;)', r'&amp;', s)
+    return re.sub(r'&(?!#?\w+;)', r'&amp;', s)
+
+def enc(s):
+    """
+    Encode Unicode characters in string.
+    """
+    return s.encode('ascii', 'xmlcharrefreplace')
 
 def last4(code):
     """
@@ -83,6 +150,44 @@ def convlon(coord):
     else:
 	return 'E' + convcoord(coord)
 
+def travelBugs(code):
+    """
+    Get list of travel bugs.
+    """
+    curs = conn.cursor()
+    curs.execute('select TravelBugs from cachememo where code=? limit 1', (code, ))
+    row = curs.fetchone()
+    return row['TravelBugs']
+
+def getText(code):
+    """
+    Get textual info for cache.
+    """
+    curs = conn.cursor()
+    curs.execute('select LongDescription,ShortDescription,Hints from cachememo where code=? limit 1', (code, ))
+    row = curs.fetchone()
+    return (
+	    row['LongDescription'],
+	    row['ShortDescription'],
+	    row['Hints'],
+	    )
+
+def attribFmt(row):
+    return '%s=%s' % (
+	    Attributes.get(row['aId'], 'Unknown attr'),
+	    'Y' if row['aInc'] else 'N'
+	    )
+
+def attribs(code):
+    """
+    Get cache attributes.
+    """
+    curs = conn.cursor()
+    curs.execute('select * from attributes where aCode=?', (code, ))
+    attr = ''
+    return ', '.join([attribFmt(r) for r in curs])
+
+
 def processCache(row):
     wptname = '%s/%s/%s' % (row['SmartName'], CacheTypes[row['CacheType']], row['Code'])
 
@@ -111,10 +216,53 @@ def processCache(row):
 
     coords = '%s %s' % (convlat(float(row['Latitude'])), convlon(float(row['Longitude'])))
 
-    print wptname, name.encode('utf-8'), ownername.encode('utf-8')
-    print infoline
-    print dates
-    print coords
+    cacheinfo = """
+<font color=red>%s by %s</font><br>
+<font color=#008000>%s</font><br>
+<font color=blue>%s</font><br>
+<font color=orange>%s</font><br><br>
+""" % (
+	enc(name), enc(ownername),
+	infoline, dates, coords)
+
+    if row['HasTravelBug']:
+	tbstr = escAmp(travelBugs(row['Code']))
+	cacheinfo += """
+<font color=#FF00FF>**Travel Bugs**%s</font><br><br>
+""" % enc(tbstr)
+
+    attr = attribs(row['Code'])
+    if attr != '':
+	cacheinfo += """
+**Attributes**<br>%s<br><br>
+""" % attr
+
+    plaincacheinfo = """
+%s
+%s
+%s
+%s by %s
+%s
+""" % (
+	statusplain, 
+	coords, 
+	infoline, 
+	enc(name), enc(ownername), 
+	dates)
+
+    ( longdesc, shortdesc, hints ) = getText(row['Code'])
+
+    hints = """
+<font color=#008000>****<br>Hint: %s<br>****</font><br><br>
+""" % enc(escAmp(hints))
+
+    alldesc = enc(shortdesc + longdesc)
+
+    print wptname
+    print cacheinfo
+    print plaincacheinfo
+    print alldesc
+    print hints
 
 
 conn = sqlite3.connect('sqlite.db3')
