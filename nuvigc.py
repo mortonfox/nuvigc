@@ -118,6 +118,7 @@ def last4(code):
     curs = conn.cursor()
     curs.execute('select lType from logs where lParent=?', (code, ))
     rows = curs.fetchall()
+    curs.close()
     rowcount = len(rows)
 
     l4 = ''
@@ -160,6 +161,7 @@ def travelBugs(code):
     curs = conn.cursor()
     curs.execute('select TravelBugs from cachememo where code=? limit 1', (code, ))
     row = curs.fetchone()
+    curs.close()
     return row['TravelBugs']
 
 def getText(code):
@@ -169,6 +171,7 @@ def getText(code):
     curs = conn.cursor()
     curs.execute('select LongDescription,ShortDescription,Hints from cachememo where code=? limit 1', (code, ))
     row = curs.fetchone()
+    curs.close()
     return (
 	    row['LongDescription'],
 	    row['ShortDescription'],
@@ -193,6 +196,7 @@ def logText(logid):
     curs = conn.cursor()
     curs.execute('select lText from logmemo where lLogId=? limit 1', (logid, ))
     row = curs.fetchone()
+    curs.close()
     return row['lText']
 
 def logFmt(row):
@@ -241,6 +245,23 @@ class StripHTML(HTMLParser):
     def handle_endtag(self, tag):
 	if tag == 'p':
 	    self.text += '</%s>' % tag
+
+    def handle_entityref(self, name):
+	if name == 'ndash' or name == 'mdash':
+	    self.text += '-'
+	elif name == 'nbsp':
+	    self.text += ' '
+	elif name == 'ldquo' or name == 'rdquo':
+	    self.text += '&quot;'
+	elif name == 'lsquo' or name == 'rsquo':
+	    self.text += "'"
+	elif name == 'trade':
+	    self.text += '(TM)'
+	else:
+	    self.text += '&%s;' % name
+
+    def handle_charref(self, name):
+	self.text += '&#%s;' % name
 
     def get_data(self):
 	return self.text
@@ -327,9 +348,9 @@ def processCache(row):
 <font color=#008000>****<br>Hint: %s<br>****</font><br><br>
 """ % enc(escAmp(hints))
 
-    alldesc = enc(shortdesc + longdesc)
+    alldesc = escAmp(enc(shortdesc + longdesc))
 
-    logstr = cleanStr(logs(row['Code']))
+    logstr = cleanStr(cleanHTML(logs(row['Code'])))
     hints = cleanStr(hints)
     alldesc = cleanHTML(alldesc)
 
@@ -358,18 +379,20 @@ def childComment(code):
     curs = conn.cursor()
     curs.execute('select cComment from waymemo where cCode=? limit 1', (code, ))
     row = curs.fetchone()
+    curs.close()
     return row['cComment']
 
 def parentSmart(code):
     curs = conn.cursor()
     curs.execute('select smartName from caches where code=? limit 1', (code, ))
     row = curs.fetchone()
+    curs.close()
     return row['smartName']
 
 def processWaypoint(row):
     wptname = '%s - %s' % (row['cCode'], row['cType'])
 
-    ccomment = cleanHTML(childComment(row['cCode']))
+    ccomment = cleanHTML(escAmp(childComment(row['cCode'])))
 
     parentinfo = '%s - (%s)' % (
 	    row['cParent'],
@@ -402,8 +425,7 @@ This is a child waypoint for Cache <font color=blue>%s</font><br><br>Type: %s<br
 
 conn = sqlite3.connect('sqlite.db3')
 
-print """
-<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
+print """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
 <gpx xmlns='http://www.topografix.com/GPX/1/1' xmlns:gpxx = 'http://www.garmin.com/xmlschemas/GpxExtensions/v3' creator='Pilotsnipes' version='1.1' xmlns:xsi = 'http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensions/v3/GpxExtensionsv3.xsd'>
 <metadata>
 <desc>Pilotsnipes GPX output for Nuvi</desc>
