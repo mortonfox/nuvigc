@@ -18,19 +18,33 @@ Last updated: December 12, 2010
 import sys
 import sqlite3
 import re
+import string
 
 CacheTypes = {
-    'A':'Pro', 'B':'Let', 'C':'CIT', 'E':'Eve', 'G':'Ben', 'I':'Whe',
-    'L':'Loc', 'M':'Mul', 'O':'Oth', 'R':'Ear', 'T':'Tra', 'U':'Mys',
-    'V':'Vir', 'W':'Web', 'X':'Maz', 'Y':'Way', 'Z':'Meg',
+	'A':'Pro', 'B':'Let', 'C':'CIT', 'E':'Eve', 'G':'Ben', 'I':'Whe',
+	'L':'Loc', 'M':'Mul', 'O':'Oth', 'R':'Ear', 'T':'Tra', 'U':'Mys',
+	'V':'Vir', 'W':'Web', 'X':'Maz', 'Y':'Way', 'Z':'Meg',
 }
 
+LogConv = {
+	'found it':'F',
+	'webcam photo taken':'F',
+	'attended':'F',
+	"didn't find it":'N',
+}
+
+
 def escAmp(s):
+    """
+    Convert stray ampersands to HTML entities but leave
+    existing HTML entities alone.
+    """
     return re.sub(r'&(?!\w+;)', r'&amp;', s)
 
 def last4(code):
-    global conn
-
+    """
+    Summarize last 4 cache logs.
+    """
     curs = conn.cursor()
     curs.execute('select lType from logs where lParent=?', (code, ))
     rows = curs.fetchall()
@@ -42,13 +56,7 @@ def last4(code):
 	if i >= rowcount:
 	    l4 += '0'
 	else:
-	    s = rows[i]['lType']
-	    if s == 'Found it' or s == 'Webcam Photo Taken' or s == 'Attended':
-		l4 += 'F'
-	    elif s == "Didn't find it":
-		l4 += 'N'
-	    else:
-		l4 += 'X'
+	    l4 += LogConv.get(string.lower(rows[i]['lType']), 'X')
 
     return l4
 
@@ -58,12 +66,18 @@ def convcoord(coord):
     return '%d %06.3f' % (deg, decim)
 
 def convlat(coord):
+    """
+    Convert latitude from decimal degrees to ddd mm.mmm
+    """
     if coord < 0:
 	return 'S' + convcoord(-coord)
     else:
 	return 'N' + convcoord(coord)
 
 def convlon(coord):
+    """
+    Convert longitude from decimal degrees to ddd mm.mmm
+    """
     if coord < 0:
 	return 'W' + convcoord(-coord)
     else:
