@@ -95,6 +95,8 @@ LogConv = {
 	"didn't find it":'N',
 }
 
+TextLimit = 16500
+
 
 def escAmp(s):
     """
@@ -249,6 +251,14 @@ def cleanHTML(s):
     return stripper.get_data()
 
 
+def truncate(s, length):
+    if len(s) <= length:
+	return s
+    s = s[:length]
+    # Clean up the end of the string so we don't leave a piece of a
+    # HTML entity behind when we truncate the string.
+    return s[:-7] + re.sub(r'&', r'', s[-7:])
+
 def processCache(row):
     wptname = '%s/%s/%s' % (row['SmartName'], CacheTypes[row['CacheType']], row['Code'])
 
@@ -325,11 +335,69 @@ def processCache(row):
 
     combdesc = cleanStr(status + cacheinfo + "Description: " + alldesc + '<br><br>')
 
-    print wptname
-    print plaincacheinfo
-    print combdesc
-    print hints
-    print logstr
+    if len(combdesc) + len(hints) > TextLimit:
+	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br><br>**DESCRIPTION CUT**<br><br>') + hints
+    else:
+	finalstr = truncate(combdesc + hints + logstr, TextLimit)
+
+
+    print """
+<wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
+<name>%s</name><cmt></cmt><desc>%s</desc>
+<link href="futurefeature.jpg"/><sym>Information</sym>
+<extensions><gpxx:WaypointExtension>
+<gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+<gpxx:Address><gpxx:PostalCode>%s</gpxx:PostalCode></gpxx:Address>
+</gpxx:WaypointExtension></extensions></wpt>
+""" % (
+	row['Latitude'], row['Longitude'],
+	wptname, finalstr, plaincacheinfo,
+	)
+
+def childComment(code):
+    curs = conn.cursor()
+    curs.execute('select cComment from waymemo where cCode=? limit 1', (code, ))
+    row = curs.fetchone()
+    return row['cComment']
+
+def parentSmart(code):
+    curs = conn.cursor()
+    curs.execute('select smartName from caches where code=? limit 1', (code, ))
+    row = curs.fetchone()
+    return row['smartName']
+
+def processWaypoint(row):
+    wptname = '%s - %s' % (row['cCode'], row['cType'])
+
+    ccomment = cleanHTML(childComment(row['cCode']))
+
+    parentinfo = '%s - (%s)' % (
+	    row['cParent'],
+	    parentSmart(row['cParent']),
+	    )
+
+    childdesc = """
+This is a child waypoint for Cache <font color=blue>%s</font><br><br>Type: %s<br>Comment: %s
+""" % (
+	parentinfo,
+	enc(row['cType']),
+	enc(ccomment),
+	)
+
+    childdesc = cleanStr(childdesc)
+
+    print """
+<wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
+<name>%s</name><cmt></cmt><desc>%s</desc><link href="futurefeature.jpg"/>
+<sym>Information</sym>
+<extensions><gpxx:WaypointExtension>
+<gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+<gpxx:Address><gpxx:PostalCode>Child of %s</gpxx:PostalCode></gpxx:Address>
+</gpxx:WaypointExtension></extensions></wpt>
+""" % (
+	row['cLat'], row['cLon'],
+	wptname, childdesc, parentinfo,
+	)
 
 
 conn = sqlite3.connect('sqlite.db3')
@@ -357,7 +425,19 @@ for row in rows:
     recordnum += 1
     if recordnum % 10 == 0:
 	print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
-	pass
     processCache(row)
+
+recordnum = 0
+
+curs.execute('select * from waypoints')
+rows = curs.fetchall()
+rowcount = len(rows)
+for row in rows:
+    recordnum += 1
+    if recordnum % 10 == 0:
+	print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
+    processWaypoint(row)
+
+print "</gpx>"
 
 # vim:set tw=0:
