@@ -232,6 +232,8 @@ class StripHTML(HTMLParser):
 	self.text = ''
 
     def handle_data(self, d):
+	d = re.sub(r'\r', r'', d)
+	d = re.sub(r'\n', r'<br>', d)
 	self.text += d
 
     def handle_starttag(self, tag, attrs):
@@ -257,8 +259,10 @@ class StripHTML(HTMLParser):
 	    self.text += "'"
 	elif name == 'trade':
 	    self.text += '(TM)'
-	else:
+	elif name == 'quot' or name == 'lt' or name == 'gt' or name == 'amp':
 	    self.text += '&%s;' % name
+	else:
+	    self.text += '(%s)' % name
 
     def handle_charref(self, name):
 	self.text += '&#%s;' % name
@@ -352,6 +356,7 @@ def processCache(row):
 
     logstr = cleanStr(cleanHTML(logs(row['Code'])))
     hints = cleanStr(hints)
+
     alldesc = cleanHTML(alldesc)
 
     combdesc = cleanStr(status + cacheinfo + "Description: " + alldesc + '<br><br>')
