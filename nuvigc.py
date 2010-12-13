@@ -19,6 +19,7 @@ import sys
 import sqlite3
 import re
 import string
+from HTMLParser import HTMLParser
 
 CacheTypes = {
 	'A':'Pro', 'B':'Let', 'C':'CIT', 'E':'Eve', 'G':'Ben', 'I':'Whe',
@@ -184,8 +185,68 @@ def attribs(code):
     """
     curs = conn.cursor()
     curs.execute('select * from attributes where aCode=?', (code, ))
-    attr = ''
     return ', '.join([attribFmt(r) for r in curs])
+
+def logText(logid):
+    curs = conn.cursor()
+    curs.execute('select lText from logmemo where lLogId=? limit 1', (logid, ))
+    row = curs.fetchone()
+    return row['lText']
+
+def logFmt(row):
+    return """
+<font color=blue>%s by %s %s</font> - %s%s%s<br><br>
+""" % (
+	row['lType'],
+	enc(escAmp(row['lBy'])),
+	row['lDate'],
+	convlat(float(row['lLat'])) + ' ' if row['lLat'] != '' else '',
+	convlon(float(row['lLon'])) + ' ' if row['lLon'] != '' else '',
+	enc(escAmp(logText(row['lLogId']))),
+	)
+
+def logs(code):
+    """
+    Get cache logs.
+    """
+    curs = conn.cursor()
+    curs.execute('select * from logs where lParent=?', (code, ))
+    return ''.join([logFmt(r) for r in curs])
+
+def cleanStr(s):
+    s = re.sub(r'\s+', r' ', s)
+    s = re.sub(r'"', r'&quot;', s)
+    s = re.sub(r'<', r'&lt;', s)
+    s = re.sub(r'>', r'&gt;', s)
+    return s
+
+class StripHTML(HTMLParser):
+    def __init__(self):
+	self.reset()
+	self.text = ''
+
+    def handle_data(self, d):
+	self.text += d
+
+    def handle_starttag(self, tag, attrs):
+	if tag == 'p' or tag == 'br':
+	    self.text += '<%s>' % tag
+
+    def handle_startendtag(self, tag, attrs):
+	if tag == 'br':
+	    self.text += '<%s>' % tag
+
+    def handle_endtag(self, tag):
+	if tag == 'p':
+	    self.text += '</%s>' % tag
+
+    def get_data(self):
+	return self.text
+
+def cleanHTML(s):
+    stripper = StripHTML()
+    stripper.feed(s)
+    return stripper.get_data()
 
 
 def processCache(row):
@@ -258,11 +319,17 @@ def processCache(row):
 
     alldesc = enc(shortdesc + longdesc)
 
+    logstr = cleanStr(logs(row['Code']))
+    hints = cleanStr(hints)
+    alldesc = cleanHTML(alldesc)
+
+    combdesc = cleanStr(status + cacheinfo + "Description: " + alldesc + '<br><br>')
+
     print wptname
-    print cacheinfo
     print plaincacheinfo
-    print alldesc
+    print combdesc
     print hints
+    print logstr
 
 
 conn = sqlite3.connect('sqlite.db3')
@@ -289,7 +356,7 @@ rowcount = len(rows)
 for row in rows:
     recordnum += 1
     if recordnum % 10 == 0:
-	# print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
+	print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
 	pass
     processCache(row)
 
