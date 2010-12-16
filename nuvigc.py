@@ -20,6 +20,8 @@ import sqlite3
 import re
 import string
 from HTMLParser import HTMLParser
+from optparse import OptionParser
+import os
 
 CacheTypes = {
 	'A':'Pro', 'B':'Let', 'C':'CIT', 'E':'Eve', 'G':'Ben', 'I':'Whe',
@@ -267,6 +269,9 @@ class StripHTML(HTMLParser):
     def handle_charref(self, name):
 	self.text += '&#%s;' % name
 
+    def unknown_decl(self, decl):
+	pass
+
     def get_data(self):
 	return self.text
 
@@ -367,7 +372,7 @@ def processCache(row):
 	finalstr = truncate(combdesc + hints + logstr, TextLimit)
 
 
-    print """
+    print >>outf, """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
 <name>%s</name><cmt></cmt><desc>%s</desc>
 <link href="futurefeature.jpg"/><sym>Information</sym>
@@ -414,7 +419,7 @@ This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s
 
     childdesc = cleanStr(childdesc)
 
-    print """
+    print >>outf, """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
 <name>%s</name><cmt></cmt><desc>%s</desc><link href="futurefeature.jpg"/>
 <sym>Information</sym>
@@ -428,9 +433,62 @@ This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s
 	)
 
 
-conn = sqlite3.connect('sqlite.db3')
+def appDataPath():
+    """
+    Try to get the Windows application data path by various means.
+    """
+    s = os.environ.get('APPDATA')
+    if s is not None:
+	return s
 
-print """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
+    userprof = os.environ.get('USERPROFILE')
+    if userprof is not None:
+	return userprof + '/Application Data'
+    
+    homedrive = os.environ.get('HOMEDRIVE')
+    homepath = os.environ.get('HOMEPATH')
+
+    if homedrive is not None and homepath is not None:
+	return '%s%s/Application Data' % (homedrive, homepath)
+
+    if homedrive is None:
+	homedrive = 'C:'
+
+    username = os.environ.get('USERNAME')
+    if username is not None:
+	return '%s/Documents and Settings/%s/Application Data'
+
+    return ''
+
+# ----- Main -----
+
+parser = OptionParser(usage = 'usage: %prog [options] dbname')
+parser.add_option('-d', '--output-dir', dest='outdir', default='.',
+	help='Output directory.')
+
+(options, args) = parser.parse_args()
+
+try:
+    dbname = args[0]
+except IndexError:
+    parser.print_help()
+    sys.exit(1)
+
+outdir = options.outdir
+
+dbfile = '%s/gsak/data/%s/sqlite.db3' % (appDataPath(), dbname)
+
+try:
+    conn = sqlite3.connect(dbfile)
+except sqlite3.OperationalError, e:
+    print >> sys.stderr, 'Error opening database %s: %s' % (dbfile, e.message)
+    sys.exit(2)
+
+outfname = '%s/%s GSAK.gpx' % (outdir, dbname)
+
+outf = open(outfname, 'w')
+
+print >>outf, """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
 <gpx xmlns='http://www.topografix.com/GPX/1/1' xmlns:gpxx = 'http://www.garmin.com/xmlschemas/GpxExtensions/v3' creator='Pilotsnipes' version='1.1' xmlns:xsi = 'http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensions/v3/GpxExtensionsv3.xsd'>
 <metadata>
 <desc>Pilotsnipes GPX output for Nuvi</desc>
@@ -465,6 +523,7 @@ for row in rows:
 	print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
     processWaypoint(row)
 
-print "</gpx>"
+print >>outf, "</gpx>"
+outf.close()
 
 # vim:set tw=0:
