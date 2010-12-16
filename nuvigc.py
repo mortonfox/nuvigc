@@ -201,14 +201,14 @@ def logText(logid):
 
 def logFmt(row):
     return """
-<font color=blue>%s by %s %s</font> - %s%s%s<br><br>
+<font color=#0000FF>%s by %s %s</font> - %s%s%s<br><br>
 """ % (
 	row['lType'],
 	enc(escAmp(row['lBy'])),
 	row['lDate'],
 	convlat(float(row['lLat'])) + ' ' if row['lLat'] != '' else '',
 	convlon(float(row['lLon'])) + ' ' if row['lLon'] != '' else '',
-	enc(escAmp(logText(row['lLogId']))),
+	cleanHTML(enc(escAmp(logText(row['lLogId'])))),
 	)
 
 def logs(code):
@@ -291,11 +291,11 @@ def processCache(row):
     statusplain = ''
 
     if row['TempDisabled']:
-	status = '<font color=red>*** Temp Unavailable ***</font><br><br>'
+	status = '<font color=#FF0000>*** Temp Unavailable ***</font><br><br>'
 	statusplain = '*** Temp Unavailable ***'
 
     if row['Archived']:
-	status = '<font color=red>*** Archived ***</font><br><br>'
+	status = '<font color=#FF0000>*** Archived ***</font><br><br>'
 	statusplain = '*** Archived ***'
 
     name = escAmp(row['Name'])
@@ -313,10 +313,10 @@ def processCache(row):
     coords = '%s %s' % (convlat(float(row['Latitude'])), convlon(float(row['Longitude'])))
 
     cacheinfo = """
-<font color=red>%s by %s</font><br>
+<font color=#FF0000>%s by %s</font><br>
 <font color=#008000>%s</font><br>
-<font color=blue>%s</font><br>
-<font color=orange>%s</font><br><br>
+<font color=#0000FF>%s</font><br>
+<font color=#FFA500>%s</font><br><br>
 """ % (
 	enc(name), enc(ownername),
 	infoline, dates, coords)
@@ -330,7 +330,7 @@ def processCache(row):
     attr = attribs(row['Code'])
     if attr != '':
 	cacheinfo += """
-**Attributes**<br>%s<br><br>
+<font color=#00BFFF>**Attributes** %s</font><br><br>
 """ % attr
 
     plaincacheinfo = """
@@ -354,7 +354,7 @@ def processCache(row):
 
     alldesc = escAmp(enc(shortdesc + longdesc))
 
-    logstr = cleanStr(cleanHTML(logs(row['Code'])))
+    logstr = cleanStr(logs(row['Code']))
     hints = cleanStr(hints)
 
     alldesc = cleanHTML(alldesc)
@@ -405,7 +405,7 @@ def processWaypoint(row):
 	    )
 
     childdesc = """
-This is a child waypoint for Cache <font color=blue>%s</font><br><br>Type: %s<br>Comment: %s
+This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s<br>Comment: %s
 """ % (
 	parentinfo,
 	enc(row['cType']),
