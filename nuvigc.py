@@ -367,7 +367,7 @@ def processCache(row):
 
     alldesc = cleanHTML(alldesc)
 
-    combdesc = cleanStr(status + cacheinfo + "Description: " + alldesc + '<br><br>')
+    combdesc = cleanStr(status + escAmp(cacheinfo) + "Description: " + alldesc + '<br><br>')
 
     if len(combdesc) + len(hints) > TextLimit:
 	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br><br>**DESCRIPTION CUT**<br><br>') + hints
@@ -385,7 +385,7 @@ def processCache(row):
 </gpxx:WaypointExtension></extensions></wpt>
 """ % (
 	row['Latitude'], row['Longitude'],
-	wptname, finalstr, plaincacheinfo,
+	wptname, finalstr, cleanStr(escAmp(plaincacheinfo)),
 	)
 
 def childComment(code):
