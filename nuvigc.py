@@ -121,7 +121,7 @@ def last4(code):
     Summarize last 4 cache logs.
     """
     curs = conn.cursor()
-    curs.execute('select lType from logs where lParent=?', (code, ))
+    curs.execute('select lType from logs where lParent=? order by lDate desc', (code, ))
     rows = curs.fetchall()
     curs.close()
     rowcount = len(rows)
@@ -221,7 +221,7 @@ def logs(code):
     Get cache logs.
     """
     curs = conn.cursor()
-    curs.execute('select * from logs where lParent=?', (code, ))
+    curs.execute('select * from logs where lParent=? order by lDate desc', (code, ))
     return ''.join([logFmt(r) for r in curs])
 
 def cleanStr(s):
