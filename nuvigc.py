@@ -19,7 +19,7 @@ import sys
 import sqlite3
 import re
 import string
-from HTMLParser import HTMLParser
+from HTMLParser import HTMLParser, HTMLParseError
 from optparse import OptionParser
 import os
 import os.path
@@ -280,7 +280,15 @@ class StripHTML(HTMLParser):
 
 def cleanHTML(s):
     stripper = StripHTML()
-    stripper.feed(s)
+    try:
+	stripper.feed(s)
+    except HTMLParseError:
+	# In the worst case scenario if the HTML parser fails, we
+	# do a simple cleanup.
+	s = re.sub(r'&', r'&amp;', s)
+	s = re.sub(r'<', r'[', s)
+	s = re.sub(r'>', r']', s)
+	return s
     return stripper.get_data()
 
 
@@ -375,7 +383,7 @@ def processCache(row):
 	finalstr = truncate(combdesc + hints + logstr, TextLimit)
 
 
-    print >>outf, """
+    return """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
 <name>%s</name><cmt></cmt><desc>%s</desc>
 <link href="futurefeature.jpg"/><sym>Information</sym>
@@ -422,7 +430,7 @@ This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s
 
     childdesc = cleanStr(childdesc)
 
-    print >>outf, """
+    return """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
 <name>%s</name><cmt></cmt><desc>%s</desc><link href="futurefeature.jpg"/>
 <sym>Information</sym>
@@ -473,36 +481,36 @@ def writeicon(fname, data):
     f.write(base64.b64decode(data))
     f.close()
 
+def main():
+    global conn
 
-# ----- Main -----
+    parser = OptionParser(usage = 'usage: %prog [options] dbname')
+    parser.add_option('-d', '--output-dir', dest='outdir', default='.',
+	    help='Output directory.')
 
-parser = OptionParser(usage = 'usage: %prog [options] dbname')
-parser.add_option('-d', '--output-dir', dest='outdir', default='.',
-	help='Output directory.')
+    (options, args) = parser.parse_args()
 
-(options, args) = parser.parse_args()
+    try:
+	dbname = args[0]
+    except IndexError:
+	parser.print_help()
+	sys.exit(1)
 
-try:
-    dbname = args[0]
-except IndexError:
-    parser.print_help()
-    sys.exit(1)
+    outdir = options.outdir
 
-outdir = options.outdir
+    dbfile = '%s/gsak/data/%s/sqlite.db3' % (appDataPath(), dbname)
 
-dbfile = '%s/gsak/data/%s/sqlite.db3' % (appDataPath(), dbname)
+    try:
+	conn = sqlite3.connect(dbfile)
+    except sqlite3.OperationalError, e:
+	print >> sys.stderr, 'Error opening database %s: %s' % (dbfile, e.message)
+	sys.exit(2)
 
-try:
-    conn = sqlite3.connect(dbfile)
-except sqlite3.OperationalError, e:
-    print >> sys.stderr, 'Error opening database %s: %s' % (dbfile, e.message)
-    sys.exit(2)
+    outfname = '%s/%s GSAK.gpx' % (outdir, dbname)
 
-outfname = '%s/%s GSAK.gpx' % (outdir, dbname)
+    outf = open(outfname, 'w')
 
-outf = open(outfname, 'w')
-
-print >>outf, """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
+    print >>outf, """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
 <gpx xmlns='http://www.topografix.com/GPX/1/1' xmlns:gpxx = 'http://www.garmin.com/xmlschemas/GpxExtensions/v3' creator='Pilotsnipes' version='1.1' xmlns:xsi = 'http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensions/v3/GpxExtensionsv3.xsd'>
 <metadata>
 <desc>Pilotsnipes GPX output for Nuvi</desc>
@@ -513,34 +521,37 @@ print >>outf, """<?xml version='1.0' encoding='Windows-1252' standalone='no' ?>
 
 """
 
-recordnum = 0
+    recordnum = 0
 
-conn.row_factory = sqlite3.Row
-curs = conn.cursor()
-curs.execute('select * from caches')
-rows = curs.fetchall()
-rowcount = len(rows)
-for row in rows:
-    recordnum += 1
-    if recordnum % 10 == 0:
-	print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
-    processCache(row)
+    conn.row_factory = sqlite3.Row
+    curs = conn.cursor()
+    curs.execute('select * from caches')
+    rows = curs.fetchall()
+    rowcount = len(rows)
+    for row in rows:
+	recordnum += 1
+	if recordnum % 10 == 0:
+	    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
+	print >>outf, processCache(row)
 
-recordnum = 0
+    recordnum = 0
 
-curs.execute('select * from waypoints')
-rows = curs.fetchall()
-rowcount = len(rows)
-for row in rows:
-    recordnum += 1
-    if recordnum % 10 == 0:
-	print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
-    processWaypoint(row)
+    curs.execute('select * from waypoints')
+    rows = curs.fetchall()
+    rowcount = len(rows)
+    for row in rows:
+	recordnum += 1
+	if recordnum % 10 == 0:
+	    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
+	print >>outf, processWaypoint(row)
 
-print >>outf, "</gpx>"
-outf.close()
+    print >>outf, "</gpx>"
+    outf.close()
 
-writeicon('%s GSAK.bmp' % dbname, nuvifiles.cacheBMP)
-writeicon('%s GSAK.jpg' % dbname, nuvifiles.cacheJPG)
+    writeicon('%s GSAK.bmp' % dbname, nuvifiles.cacheBMP)
+    writeicon('%s GSAK.jpg' % dbname, nuvifiles.cacheJPG)
+
+if __name__ == '__main__':
+    main()
 
 # vim:set tw=0:
