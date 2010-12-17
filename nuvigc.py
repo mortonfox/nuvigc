@@ -12,7 +12,7 @@ Version: 0.0.1
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: December 12, 2010
+Last updated: December 16, 2010
 """
 
 import sys
@@ -22,6 +22,9 @@ import string
 from HTMLParser import HTMLParser
 from optparse import OptionParser
 import os
+import os.path
+import nuvifiles
+import base64
 
 CacheTypes = {
 	'A':'Pro', 'B':'Let', 'C':'CIT', 'E':'Eve', 'G':'Ben', 'I':'Whe',
@@ -460,6 +463,17 @@ def appDataPath():
 
     return ''
 
+def writeicon(fname, data):
+    """
+    Write out an icon file. Don't do anything if it already exists.
+    """
+    if os.path.exists(fname):
+	return
+    f = open(fname, 'wb')
+    f.write(base64.b64decode(data))
+    f.close()
+
+
 # ----- Main -----
 
 parser = OptionParser(usage = 'usage: %prog [options] dbname')
@@ -525,5 +539,8 @@ for row in rows:
 
 print >>outf, "</gpx>"
 outf.close()
+
+writeicon('%s GSAK.bmp' % dbname, nuvifiles.cacheBMP)
+writeicon('%s GSAK.jpg' % dbname, nuvifiles.cacheJPG)
 
 # vim:set tw=0:
