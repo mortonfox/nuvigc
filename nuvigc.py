@@ -225,6 +225,9 @@ def logs(code):
     return ''.join([logFmt(r) for r in curs])
 
 def cleanStr(s):
+    """
+    HTML-escape some special characters and compress whitespace.
+    """
     s = re.sub(r'\s+', r' ', s)
     s = re.sub(r'"', r'&quot;', s)
     s = re.sub(r'<', r'&lt;', s)
@@ -232,6 +235,12 @@ def cleanStr(s):
     return s
 
 class StripHTML(HTMLParser):
+    """
+    Strip out HTML tags except for <p> and <br>.
+    Convert some HTML entities and remove the rest.
+    This is for POILoader and the Nuvi, which can't handle anything
+    too complicated.
+    """
     def __init__(self):
 	self.reset()
 	self.text = ''
@@ -279,12 +288,14 @@ class StripHTML(HTMLParser):
 	return self.text
 
 def cleanHTML(s):
+    """
+    Wrapper function for HTML stripper class.
+    """
     stripper = StripHTML()
     try:
 	stripper.feed(s)
     except HTMLParseError:
-	# In the worst case scenario if the HTML parser fails, we
-	# do a simple cleanup.
+	# If the HTML parser fails, we fall back to a simple cleanup.
 	s = re.sub(r'&', r'&amp;', s)
 	s = re.sub(r'<', r'[', s)
 	s = re.sub(r'>', r']', s)
@@ -293,6 +304,10 @@ def cleanHTML(s):
 
 
 def truncate(s, length):
+    """
+    Truncate a string to the specified length but clean up HTML entities
+    at the end of the string that may have gotten chopped up.
+    """
     if len(s) <= length:
 	return s
     s = s[:length]
@@ -301,6 +316,10 @@ def truncate(s, length):
     return s[:-7] + re.sub(r'&', r'', s[-7:])
 
 def processCache(row):
+    """
+    Process a record from the caches table. Generate GPX output for that
+    geocache.
+    """
     wptname = '%s/%s/%s' % (row['SmartName'], CacheTypes[row['CacheType']], row['Code'])
 
     status = ''
@@ -349,6 +368,8 @@ def processCache(row):
 <font color=#00BFFF>**Attributes** %s</font><br><br>
 """ % attr
 
+    # This is some cache information in plain text that the Nuvi will display
+    # before you touch the "More" button.
     plaincacheinfo = """
 %s
 %s
@@ -411,6 +432,9 @@ def parentSmart(code):
     return row['smartName']
 
 def processWaypoint(row):
+    """
+    Generate GPX for an additional waypoint.
+    """
     wptname = '%s - %s' % (row['cCode'], row['cType'])
 
     ccomment = cleanHTML(escAmp(childComment(row['cCode'])))
@@ -534,6 +558,8 @@ def main():
 	    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
 	print >>outf, processCache(row)
 
+    print >> sys.stderr, "\nDone"
+
     recordnum = 0
 
     curs.execute('select * from waypoints')
@@ -544,6 +570,8 @@ def main():
 	if recordnum % 10 == 0:
 	    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
 	print >>outf, processWaypoint(row)
+
+    print >> sys.stderr, "\nDone"
 
     print >>outf, "</gpx>"
     outf.close()
