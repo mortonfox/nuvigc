@@ -8,11 +8,11 @@ This is based on the original GSAK macro at
 http://geocaching.totaltechworld.com/ but rewritten in Python and updated
 to support new geocaching GPX features.
 
-Version: 0.0.1
+Version: 0.0.2
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: December 16, 2010
+Last updated: December 18, 2010
 """
 
 import sys
@@ -116,14 +116,37 @@ def enc(s):
     """
     return s.encode('ascii', 'xmlcharrefreplace')
 
+class LogsTable:
+    """
+    Prefetch logs table.
+    """
+    def __init__(self):
+	self.table = {}
+
+    def queryData(self):
+	curs = conn.cursor()
+	curs.execute('select * from logs')
+	for row in curs:
+	    self.table[row['lParent']] = self.table.get(row['lParent'], []) + [row]
+	for lpar, row in self.table.iteritems():
+	    row.sort(key=lambda r: r['lDate'], reverse=True)
+
+    def getRows(self, parent):
+	if not self.table:
+	    self.queryData()
+	return self.table[parent]
+
+logsTable = LogsTable()
+
 def last4(code):
     """
     Summarize last 4 cache logs.
     """
-    curs = conn.cursor()
-    curs.execute('select lType from logs where lParent=? order by lDate desc', (code, ))
-    rows = curs.fetchall()
-    curs.close()
+#     curs = conn.cursor()
+#     curs.execute('select lType from logs where lParent=? order by lDate desc', (code, ))
+#     rows = curs.fetchall()
+#     curs.close()
+    rows = logsTable.getRows(code)
     rowcount = len(rows)
 
     l4 = ''
@@ -160,12 +183,15 @@ def convlon(coord):
 	return 'E' + convcoord(coord)
 
 class CacheMemo:
+    """
+    Prefetch cachememo table.
+    """
     def __init__(self):
 	self.table = {}
 
     def queryData(self):
 	curs = conn.cursor()
-	curs.execute('select Code,TravelBugs,LongDescription,ShortDescription,Hints from cachememo')
+	curs.execute('select * from cachememo')
 	for row in curs:
 	    self.table[row['Code']] = row
 
@@ -202,6 +228,26 @@ def getText(code):
 	    row['Hints'],
 	    )
 
+class AttrTable:
+    """
+    Prefetch attributes table.
+    """
+    def __init__(self):
+	self.table = {}
+
+    def queryData(self):
+	curs = conn.cursor()
+	curs.execute('select * from attributes')
+	for row in curs:
+	    self.table[row['aCode']] = self.table.get(row['aCode'], []) + [row]
+
+    def getRows(self, code):
+	if not self.table:
+	    self.queryData()
+	return self.table.get(code, [])
+
+attrTable = AttrTable()
+
 def attribFmt(row):
     return '%s=%s' % (
 	    Attributes.get(row['aId'], 'Unknown attr'),
@@ -212,17 +258,22 @@ def attribs(code):
     """
     Get cache attributes.
     """
-    curs = conn.cursor()
-    curs.execute('select * from attributes where aCode=?', (code, ))
-    return ', '.join([attribFmt(r) for r in curs])
+    rows = attrTable.getRows(code)
+    return ', '.join([attribFmt(r) for r in rows])
+#     curs = conn.cursor()
+#     curs.execute('select * from attributes where aCode=?', (code, ))
+#     return ', '.join([attribFmt(r) for r in curs])
 
 class LogMemo:
+    """
+    Prefetch logmemo table.
+    """
     def __init__(self):
 	self.table = {}
 
     def queryData(self):
 	curs = conn.cursor()
-	curs.execute('select lLogId,lText from logmemo')
+	curs.execute('select * from logmemo')
 	for row in curs:
 	    self.table[row['lLogId']] = row['lText']
 
@@ -257,9 +308,11 @@ def logs(code):
     """
     Get cache logs.
     """
-    curs = conn.cursor()
-    curs.execute('select * from logs where lParent=? order by lDate desc', (code, ))
-    return ''.join([logFmt(r) for r in curs])
+#     curs = conn.cursor()
+#     curs.execute('select lType,lBy,lDate,lLat,lLon,lLogId from logs where lParent=? order by lDate desc', (code, ))
+#     return ''.join([logFmt(r) for r in curs])
+    rows = logsTable.getRows(code)
+    return ''.join([logFmt(r) for r in rows])
 
 def cleanStr(s):
     """
