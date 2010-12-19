@@ -479,7 +479,7 @@ def processCache(row):
 <font color=#008000>****<br>Hint: %s<br>****</font><br><br>
 """ % enc(escAmp(hints))
 
-    alldesc = escAmp(enc(shortdesc + ' ' + longdesc))
+    alldesc = escAmp(enc(shortdesc + '<br><br>' + longdesc))
 
     logstr = cleanStr(logs(row['Code']))
     hints = cleanStr(hints)
@@ -639,6 +639,7 @@ def main():
 
     conn.row_factory = sqlite3.Row
     curs = conn.cursor()
+    curs.execute('PRAGMA cache_size=20000')
     curs.execute('select * from caches')
     rows = curs.fetchall()
     rowcount = len(rows)
