@@ -159,24 +159,43 @@ def convlon(coord):
     else:
 	return 'E' + convcoord(coord)
 
+class CacheMemo:
+    def __init__(self):
+	self.table = {}
+
+    def queryData(self):
+	curs = conn.cursor()
+	curs.execute('select Code,TravelBugs,LongDescription,ShortDescription,Hints from cachememo')
+	for row in curs:
+	    self.table[row['Code']] = row
+
+    def getRow(self, code):
+	if not self.table:
+	    self.queryData()
+	return self.table[code]
+
+cacheMemo = CacheMemo()
+
 def travelBugs(code):
     """
     Get list of travel bugs.
     """
-    curs = conn.cursor()
-    curs.execute('select TravelBugs from cachememo where code=? limit 1', (code, ))
-    row = curs.fetchone()
-    curs.close()
-    return row['TravelBugs']
+    return cacheMemo.getRow(code)['TravelBugs']
+#     curs = conn.cursor()
+#     curs.execute('select TravelBugs from cachememo where code=? limit 1', (code, ))
+#     row = curs.fetchone()
+#     curs.close()
+#     return row['TravelBugs']
 
 def getText(code):
     """
     Get textual info for cache.
     """
-    curs = conn.cursor()
-    curs.execute('select LongDescription,ShortDescription,Hints from cachememo where code=? limit 1', (code, ))
-    row = curs.fetchone()
-    curs.close()
+#     curs = conn.cursor()
+#     curs.execute('select LongDescription,ShortDescription,Hints from cachememo where code=? limit 1', (code, ))
+#     row = curs.fetchone()
+#     curs.close()
+    row = cacheMemo.getRow(code)
     return (
 	    row['LongDescription'],
 	    row['ShortDescription'],
@@ -197,12 +216,30 @@ def attribs(code):
     curs.execute('select * from attributes where aCode=?', (code, ))
     return ', '.join([attribFmt(r) for r in curs])
 
+class LogMemo:
+    def __init__(self):
+	self.table = {}
+
+    def queryData(self):
+	curs = conn.cursor()
+	curs.execute('select lLogId,lText from logmemo')
+	for row in curs:
+	    self.table[row['lLogId']] = row['lText']
+
+    def getLogText(self, logid):
+	if not self.table:
+	    self.queryData()
+	return self.table[logid]
+
+logMemo = LogMemo()
+
 def logText(logid):
-    curs = conn.cursor()
-    curs.execute('select lText from logmemo where lLogId=? limit 1', (logid, ))
-    row = curs.fetchone()
-    curs.close()
-    return row['lText']
+    return logMemo.getLogText(logid)
+#     curs = conn.cursor()
+#     curs.execute('select lText from logmemo where lLogId=? limit 1', (logid, ))
+#     row = curs.fetchone()
+#     curs.close()
+#     return row['lText']
 
 def logFmt(row):
     return """
@@ -389,7 +426,7 @@ def processCache(row):
 <font color=#008000>****<br>Hint: %s<br>****</font><br><br>
 """ % enc(escAmp(hints))
 
-    alldesc = escAmp(enc(shortdesc + longdesc))
+    alldesc = escAmp(enc(shortdesc + ' ' + longdesc))
 
     logstr = cleanStr(logs(row['Code']))
     hints = cleanStr(hints)
