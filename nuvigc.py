@@ -68,7 +68,7 @@ class LogsTable:
     def getRows(self, parent):
 	if not self.table:
 	    self.queryData()
-	return self.table[parent]
+	return self.table.get(parent, [])
 
 logsTable = LogsTable()
 
