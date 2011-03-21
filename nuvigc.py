@@ -303,7 +303,15 @@ class StripHTML(HTMLParser):
 	    self.text += '(%s)' % name
 
     def handle_charref(self, name):
-	self.text += '&#%s;' % name
+	if name == '8216' or name == '8217':
+	    self.text += "'"
+	elif name == '8220' or name == '8221':
+	    self.text += '&quot;'
+	elif name == '8211' or name == '8212':
+	    self.text += '-'
+	else:
+	    # Mac version of POI Loader doesn't handle numeric entities very well.
+	    self.text += ('(#%s)' if sys.platform else '&#%s;') % name
 
     def unknown_decl(self, decl):
 	pass
