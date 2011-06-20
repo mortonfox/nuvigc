@@ -8,11 +8,11 @@ This is based on the original GSAK macro at
 http://geocaching.totaltechworld.com/ but rewritten in Python and updated
 to support new geocaching GPX features.
 
-Version: 0.0.2
+Version: 0.0.3
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: December 18, 2010
+Last updated: June 20, 2011
 """
 
 import sys
@@ -424,11 +424,11 @@ def processCache(row):
     alldesc = escAmp(enc(shortdesc + '<br><br>' + longdesc))
 
     logstr = cleanStr(logs(row['Code']))
-    hints = cleanStr(hints)
+    hints = cleanStr(cleanHTML(hints))
 
     alldesc = cleanHTML(alldesc)
 
-    combdesc = cleanStr(status + escAmp(cacheinfo) + "Description: " + alldesc + '<br><br>')
+    combdesc = cleanStr(status + escAmp(cleanHTML(cacheinfo)) + "Description: " + alldesc + '<br><br>')
 
     if len(combdesc) + len(hints) > TextLimit:
 	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br><br>**DESCRIPTION CUT**<br><br>') + hints
@@ -446,7 +446,7 @@ def processCache(row):
 </gpxx:WaypointExtension></extensions></wpt>
 """ % (
 	row['Latitude'], row['Longitude'],
-	wptname, finalstr, cleanStr(escAmp(plaincacheinfo)),
+	wptname, finalstr, cleanStr(escAmp(cleanHTML(plaincacheinfo))),
 	)
 
 def childComment(code):
@@ -484,7 +484,7 @@ This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s
 	enc(ccomment),
 	)
 
-    childdesc = cleanStr(childdesc)
+    childdesc = cleanStr(cleanHTML(childdesc))
 
     return """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
