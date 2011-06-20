@@ -251,12 +251,46 @@ def logs(code):
 def cleanStr(s):
     """
     HTML-escape some special characters and compress whitespace.
+    Convert some entity refs.
     """
-    s = re.sub(r'\s+', r' ', s)
-    s = re.sub(r'"', r'&quot;', s)
-    s = re.sub(r'<', r'&lt;', s)
-    s = re.sub(r'>', r'&gt;', s)
+    s = re.sub(r'\s+', ' ', s)
+    s = re.sub(r'"', '&quot;', s)
+    s = re.sub(r'<', '&lt;', s)
+    s = re.sub(r'>', '&gt;', s)
+
+    s = re.sub(r'&ndash;', '-', s)
+    s = re.sub(r'&mdash;', '-', s)
+    s = re.sub(r'&nbsp;', ' ', s)
+    s = re.sub(r'&ldquo;', '&quot;', s)
+    s = re.sub(r'&rdquo;', '&quot;', s)
+    s = re.sub(r'&lsquo;', "'", s)
+    s = re.sub(r'&rsquo;', "'", s)
+    s = re.sub(r'&trade;', '(TM)', s)
+
+    s = re.sub(r'&(\w+);', entity_repl, s)
+
+    s = re.sub(r'&#8216;', "'", s)
+    s = re.sub(r'&#8217;', "'", s)
+    s = re.sub(r'&#8220;', '&quot;', s)
+    s = re.sub(r'&#8221;', '&quot;', s)
+    s = re.sub(r'&#8211;', '-', s)
+    s = re.sub(r'&#8212;', '-', s)
+
+    s = re.sub(r'&#(\d+);', entity_num_repl, s)
+
     return s
+
+def entity_repl(matchobj):
+    name = matchobj.group(1)
+    if name == 'quot' or name == 'lt' or name == 'gt' or name == 'amp':
+	return '&%s;' % name
+    else:
+	return '(%s)' % name
+
+def entity_num_repl(matchobj):
+    name = matchobj.group(1)
+    # Mac version of POI Loader doesn't handle numeric entities very well.
+    return ('(#%s)' if sys.platform == 'darwin' else '&#%s;') % name
 
 class StripHTML(HTMLParser):
     """
@@ -311,7 +345,7 @@ class StripHTML(HTMLParser):
 	    self.text += '-'
 	else:
 	    # Mac version of POI Loader doesn't handle numeric entities very well.
-	    self.text += ('(#%s)' if sys.platform else '&#%s;') % name
+	    self.text += ('(#%s)' if sys.platform == 'darwin' else '&#%s;') % name
 
     def unknown_decl(self, decl):
 	pass
@@ -424,11 +458,11 @@ def processCache(row):
     alldesc = escAmp(enc(shortdesc + '<br><br>' + longdesc))
 
     logstr = cleanStr(logs(row['Code']))
-    hints = cleanStr(cleanHTML(hints))
+    hints = cleanStr(hints)
 
     alldesc = cleanHTML(alldesc)
 
-    combdesc = cleanStr(status + escAmp(cleanHTML(cacheinfo)) + "Description: " + alldesc + '<br><br>')
+    combdesc = cleanStr(status + escAmp(cacheinfo) + "Description: " + alldesc + '<br><br>')
 
     if len(combdesc) + len(hints) > TextLimit:
 	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br><br>**DESCRIPTION CUT**<br><br>') + hints
@@ -446,7 +480,7 @@ def processCache(row):
 </gpxx:WaypointExtension></extensions></wpt>
 """ % (
 	row['Latitude'], row['Longitude'],
-	wptname, finalstr, cleanStr(escAmp(cleanHTML(plaincacheinfo))),
+	wptname, finalstr, cleanStr(escAmp(plaincacheinfo)),
 	)
 
 def childComment(code):
@@ -484,7 +518,7 @@ This is a child waypoint for Cache <font color=#0000FF>%s</font><br><br>Type: %s
 	enc(ccomment),
 	)
 
-    childdesc = cleanStr(cleanHTML(childdesc))
+    childdesc = cleanStr(childdesc)
 
     return """
 <wpt lat='%s' lon='%s'><ele>0.00</ele><time>2008-05-01T00:00:00Z</time>
