@@ -14,6 +14,12 @@ def progfilePath():
     """
     Try to get the Program Files path.
     """
+
+    # On 64-bit systems, GSAK gets installed here instead.
+    s = os.environ.get('ProgramFiles(x86)')
+    if s is not None:
+	return s
+
     s = os.environ.get('ProgramFiles')
     if s is not None:
 	return s
