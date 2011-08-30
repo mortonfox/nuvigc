@@ -12,7 +12,7 @@ Version: 0.0.3
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: June 20, 2011
+Last updated: August 30, 2011
 """
 
 import sys
@@ -625,6 +625,7 @@ def main():
 	    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
 	print >>outf, processCache(row)
 
+    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
     print >> sys.stderr, "\nDone"
 
     recordnum = 0
@@ -638,6 +639,7 @@ def main():
 	    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
 	print >>outf, processWaypoint(row)
 
+    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
     print >> sys.stderr, "\nDone"
 
     print >>outf, "</gpx>"
