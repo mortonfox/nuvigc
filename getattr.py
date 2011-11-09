@@ -9,6 +9,7 @@ Run this after every GSAK update in case those tables have changed.
 
 import sqlite3
 import os
+from optparse import OptionParser
 
 def progfilePath():
     """
@@ -39,7 +40,14 @@ def attribute(row):
 def main():
     global conn
 
-    dbfile = '%s/GSAK/static.db3' % progfilePath()
+    parser = OptionParser(usage = 'usage: %prog [options] dbname')
+    parser.add_option('-g', '--gsak-folder', dest='gsakfolder', default='gsak',
+	    help='GSAK folder name.')
+
+    (options, args) = parser.parse_args()
+
+    gsakdir = options.gsakfolder
+    dbfile = '%s/%s/static.db3' % (progfilePath(), gsakdir)
 
     try:
 	conn = sqlite3.connect(dbfile)

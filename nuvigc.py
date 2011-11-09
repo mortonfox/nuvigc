@@ -577,6 +577,8 @@ def main():
     parser = OptionParser(usage = 'usage: %prog [options] dbname')
     parser.add_option('-d', '--output-dir', dest='outdir', default='.',
 	    help='Output directory.')
+    parser.add_option('-g', '--gsak-folder', dest='gsakfolder', default='gsak',
+	    help='GSAK folder name.')
 
     (options, args) = parser.parse_args()
 
@@ -587,8 +589,8 @@ def main():
 	sys.exit(1)
 
     outdir = options.outdir
-
-    dbfile = '%s/gsak/data/%s/sqlite.db3' % (appDataPath(), dbname)
+    gsakdir = options.gsakfolder
+    dbfile = '%s/%s/data/%s/sqlite.db3' % (appDataPath(), gsakdir, dbname)
 
     try:
 	conn = sqlite3.connect(dbfile)
