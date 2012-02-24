@@ -9,6 +9,7 @@ Run this after every GSAK update in case those tables have changed.
 
 import sqlite3
 import os
+import sys
 from optparse import OptionParser
 
 def progfilePath():
