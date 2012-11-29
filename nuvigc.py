@@ -8,11 +8,11 @@ This is based on the original GSAK macro at
 http://geocaching.totaltechworld.com/ but rewritten in Python and updated
 to support new geocaching GPX features.
 
-Version: 0.0.3
+Version: 0.0.4
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: August 30, 2011
+Last updated: November 29, 2012
 """
 
 import sys
@@ -70,7 +70,6 @@ class LogsTable:
 	    self.queryData()
 	return self.table.get(parent, [])
 
-logsTable = LogsTable()
 
 def last4(code):
     """
@@ -134,7 +133,6 @@ class CacheMemo:
 	    self.queryData()
 	return self.table[code]
 
-cacheMemo = CacheMemo()
 
 def travelBugs(code):
     """
@@ -180,7 +178,6 @@ class AttrTable:
 	    self.queryData()
 	return self.table.get(code, [])
 
-attrTable = AttrTable()
 
 def attribFmt(row):
     return '%s=%s' % (
@@ -216,7 +213,6 @@ class LogMemo:
 	    self.queryData()
 	return self.table[logid]
 
-logMemo = LogMemo()
 
 def logText(logid):
     return logMemo.getLogText(logid)
@@ -571,25 +567,21 @@ def writeicon(fname, data):
     f.write(base64.b64decode(data))
     f.close()
 
-def main():
+def init_prefetch():
+    global logsTable, cacheMemo, attrTable, logMemo
+    logsTable = LogsTable()
+    cacheMemo = CacheMemo()
+    attrTable = AttrTable()
+    logMemo = LogMemo()
+
+
+def process_db(dbname, outdir, gsakdir):
     global conn
 
-    parser = OptionParser(usage = 'usage: %prog [options] dbname')
-    parser.add_option('-d', '--output-dir', dest='outdir', default='.',
-	    help='Output directory.')
-    parser.add_option('-g', '--gsak-folder', dest='gsakfolder', default='gsak',
-	    help='GSAK folder name.')
+    init_prefetch()
 
-    (options, args) = parser.parse_args()
+    print 'Processing database %s...' % dbname
 
-    try:
-	dbname = args[0]
-    except IndexError:
-	parser.print_help()
-	sys.exit(1)
-
-    outdir = options.outdir
-    gsakdir = options.gsakfolder
     dbfile = '%s/%s/data/%s/sqlite.db3' % (appDataPath(), gsakdir, dbname)
 
     try:
@@ -624,11 +616,11 @@ def main():
     for row in rows:
 	recordnum += 1
 	if recordnum % 10 == 0:
-	    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
+	    print "\rNow processing: %d of %d points" % (recordnum, rowcount),
 	print >>outf, processCache(row)
 
-    print >> sys.stderr, "\rNow processing: %d of %d points" % (recordnum, rowcount),
-    print >> sys.stderr, "\nDone"
+    print "\rNow processing: %d of %d points" % (recordnum, rowcount),
+    print "\nDone"
 
     recordnum = 0
 
@@ -638,17 +630,35 @@ def main():
     for row in rows:
 	recordnum += 1
 	if recordnum % 10 == 0:
-	    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
+	    print "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
 	print >>outf, processWaypoint(row)
 
-    print >> sys.stderr, "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
-    print >> sys.stderr, "\nDone"
+    print "\rNow processing: %d of %d additional points" % (recordnum, rowcount),
+    print "\nDone"
 
     print >>outf, "</gpx>"
     outf.close()
 
-    writeicon('%s GSAK.bmp' % dbname, nuvifiles.cacheBMP)
-    writeicon('%s GSAK.jpg' % dbname, nuvifiles.cacheJPG)
+    writeicon('%s/%s GSAK.bmp' % (outdir, dbname), nuvifiles.cacheBMP)
+    writeicon('%s/%s GSAK.jpg' % (outdir, dbname), nuvifiles.cacheJPG)
+
+
+def main():
+    parser = OptionParser(usage = 'usage: %prog [options] dbname [dbname ...]')
+    parser.add_option('-d', '--output-dir', dest='outdir', default='.',
+	    help='Output directory.')
+    parser.add_option('-g', '--gsak-folder', dest='gsakfolder', default='gsak',
+	    help='GSAK folder name.')
+
+    (options, args) = parser.parse_args()
+
+    if len(args) < 1:
+	parser.print_help()
+	sys.exit(1)
+
+    for arg in args:
+	process_db(arg, options.outdir, options.gsakfolder)
+
 
 if __name__ == '__main__':
     main()
