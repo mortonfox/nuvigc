@@ -12,7 +12,7 @@ Version: 0.0.4
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: November 29, 2012
+Last updated: March 13, 2013
 """
 
 import sys
@@ -271,6 +271,8 @@ def cleanStr(s):
     s = re.sub(r'&#8221;', '&quot;', s)
     s = re.sub(r'&#8211;', '-', s)
     s = re.sub(r'&#8212;', '-', s)
+
+    s = re.sub(r'\x00', '', s)
 
     s = re.sub(r'&#(\d+);', entity_num_repl, s)
 
