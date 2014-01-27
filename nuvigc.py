@@ -12,7 +12,7 @@ Version: 0.0.4
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: http://code.google.com/p/nuvigc/
 Created: December 12, 2010
-Last updated: March 13, 2013
+Last updated: January 27, 2014
 """
 
 import sys
@@ -449,21 +449,19 @@ def processCache(row):
 
     ( longdesc, shortdesc, hints ) = getText(row['Code'])
 
-    hints = """
-<font color=#008000>****<br>Hint: %s<br>****</font><br><br>
-""" % enc(escAmp(hints))
+    hints = "<font color=#008000>Hint: %s</font><br>" % enc(escAmp(hints))
 
-    alldesc = escAmp(enc(shortdesc + '<br><br>' + longdesc))
+    alldesc = escAmp(enc(shortdesc + '<br>' + longdesc))
 
     logstr = cleanStr(logs(row['Code']))
     hints = cleanStr(hints)
 
     alldesc = cleanHTML(alldesc)
 
-    combdesc = cleanStr(status + escAmp(cacheinfo) + "Description: " + alldesc + '<br><br>')
+    combdesc = cleanStr(status + escAmp(cacheinfo) + "Description: " + alldesc + '<br>')
 
     if len(combdesc) + len(hints) > TextLimit:
-	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br><br>**DESCRIPTION CUT**<br><br>') + hints
+	finalstr = truncate(combdesc, TextLimit - len(hints) - 10) + cleanStr('<br>**DESCRIPTION CUT**<br>') + hints
     else:
 	finalstr = truncate(combdesc + hints + logstr, TextLimit)
 
