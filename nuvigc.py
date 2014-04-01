@@ -8,11 +8,11 @@ This is based on the original GSAK macro at
 http://geocaching.totaltechworld.com/ but rewritten in Python and updated
 to support new geocaching GPX features.
 
-Version: 0.0.4
+Version: 0.0.5
 Author: Po Shan Cheah (morton@mortonfox.com)
-Source code: http://code.google.com/p/nuvigc/
+Source code: https://github.com/mortonfox/nuvigc
 Created: December 12, 2010
-Last updated: January 27, 2014
+Last updated: April 1, 2014
 """
 
 import sys
@@ -575,12 +575,15 @@ def init_prefetch():
     logMemo = LogMemo()
 
 
-def process_db(dbname, outdir, gsakdir):
+def process_db(dbname, outname, outdir, gsakdir):
     global conn
 
     init_prefetch()
 
-    print 'Processing database %s...' % dbname
+    if outname == dbname:
+        print 'Processing database %s...' % dbname
+    else:
+        print 'Processing database %s to %s...' % (dbname, outname)
 
     dbfile = '%s/%s/data/%s/sqlite.db3' % (appDataPath(), gsakdir, dbname)
 
@@ -590,7 +593,7 @@ def process_db(dbname, outdir, gsakdir):
 	print >> sys.stderr, 'Error opening database %s: %s' % (dbfile, e.message)
 	sys.exit(2)
 
-    outfname = '%s/%s GSAK.gpx' % (outdir, dbname)
+    outfname = '%s/%s GSAK.gpx' % (outdir, outname)
 
     outf = open(outfname, 'w')
 
@@ -639,12 +642,14 @@ def process_db(dbname, outdir, gsakdir):
     print >>outf, "</gpx>"
     outf.close()
 
-    writeicon('%s/%s GSAK.bmp' % (outdir, dbname), nuvifiles.cacheBMP)
-    writeicon('%s/%s GSAK.jpg' % (outdir, dbname), nuvifiles.cacheJPG)
+    writeicon('%s/%s GSAK.bmp' % (outdir, outname), nuvifiles.cacheBMP)
+    writeicon('%s/%s GSAK.jpg' % (outdir, outname), nuvifiles.cacheJPG)
 
 
 def main():
-    parser = OptionParser(usage = 'usage: %prog [options] dbname [dbname ...]')
+    parser = OptionParser(usage = """Usage: %prog [options] dbname[=outname] [dbname[=outname] ...]
+        dbname: Name of database to process.
+        dbname=outname: Process database dbname but output to file outname.""")
     parser.add_option('-d', '--output-dir', dest='outdir', default='.',
 	    help='Output directory.')
     parser.add_option('-g', '--gsak-folder', dest='gsakfolder', default='gsak',
@@ -657,7 +662,12 @@ def main():
 	sys.exit(1)
 
     for arg in args:
-	process_db(arg, options.outdir, options.gsakfolder)
+        # name=name2 means read DB name but output as name2.
+        dbname = arg
+        outname = arg
+        if '=' in arg:
+            dbname, outname = arg.split('=', 2)
+	process_db(dbname, outname, options.outdir, options.gsakfolder)
 
 
 if __name__ == '__main__':
