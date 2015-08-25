@@ -9,13 +9,12 @@ onto a Garmin nüvi GPS.
 
 We can visualize the flow of geocaching data like so:
 
-    geocaching.com pocket query -> GSAK -> nuvigc -> POI Loader -> nüvi GPS 
+    geocaching.com pocket query -> GSAK -> nuvigc -> POI Loader -> nüvi GPS
 
 nuvigc is based on an older GSAK macro at
 [Garmin Nuvi - True Paperless Geocaching](http://geocaching.williamsonnetwork.com)
 but instead of running as a macro within GSAK, it runs as a standalone
 Python script and can thus be called easily from a batch file.
-
 
 ## Setup
 
@@ -41,8 +40,9 @@ You can also change the name of the output file. For example,
 
     python nuvigc.py maryland=amaryland
 
-will write to output files ```amaryland GSAK.gpx```,
-```amaryland GSAK.jpg``` and ```amaryland GSAK.bmp``` instead. You can use
+will write to output
+files ```amaryland GSAK.gpx```, ```amaryland GSAK.jpg```
+and ```amaryland GSAK.bmp``` instead. You can use
 this feature to affect the order in which POI files show up on the GPS.
 
 On Windows, that command should be sufficient. On OS X or Linux, you'll
@@ -56,4 +56,6 @@ GPX files from this folder.
 
 ## Caution
 
-Avoid using numbers in database/output names. POI Loader will convert those waypoints to speed alerts instead of regular POIs and you will not be able to route to them.
+Avoid using numbers in database/output names. POI Loader will convert those
+waypoints to speed alerts instead of regular POIs and you will not be able to
+route to them.
