@@ -5,7 +5,7 @@
 The nuvigc script reads a [GSAK](http://gsak.net/) database and generates a
 GPX file suitable for passing to
 [Garmin POI Loader](http://www8.garmin.com/products/poiloader/) to load
-onto a Garmin nüvi GPS.
+onto a Garmin n&uuml;vi GPS.
 
 We can visualize the flow of geocaching data like so:
 
@@ -35,6 +35,8 @@ variable. For example:
 To use nuvigc, just run nuvigc.py with the GSAK database names as parameters.
 
     python nuvigc.py home delaware maryland
+
+That command will produce one GPX file, one JPG, and one BMP for each database. The two image files are simple icons (X in a yellow box) that will indicate geocaches on the n&uuml;vi map screen. At this time, there is no support yet for changing the geocache icon.
 
 You can also change the name of the output file. For example,
 
