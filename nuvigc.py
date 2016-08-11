@@ -12,7 +12,7 @@ Version: 0.0.5
 Author: Po Shan Cheah (morton@mortonfox.com)
 Source code: https://github.com/mortonfox/nuvigc
 Created: December 12, 2010
-Last updated: April 1, 2014
+Last updated: August 11, 2016
 """
 
 import sys
@@ -611,6 +611,10 @@ def process_db(dbname, outname, outdir, gsakdir):
     recordnum = 0
 
     conn.row_factory = sqlite3.Row
+
+    # Custom text factory ignores Unicode characters that cannot be decoded from utf-8.
+    conn.text_factory = lambda x: unicode(x, "utf-8", "ignore")
+
     curs = conn.cursor()
     curs.execute('PRAGMA cache_size=20000')
     curs.execute('select * from caches')
